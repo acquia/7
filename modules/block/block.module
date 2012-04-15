@@ -839,7 +839,7 @@ function _block_render_blocks($region_blocks) {
   // Block caching is not compatible with node access modules. We also
   // preserve the submission of forms in blocks, by fetching from cache only
   // if the request method is 'GET' (or 'HEAD').
-  $cacheable = !count(module_implements('node_grants')) && ($_SERVER['REQUEST_METHOD'] == 'GET' || $_SERVER['REQUEST_METHOD'] == 'HEAD');
+  $cacheable = _block_is_cacheable();
   foreach ($region_blocks as $key => $block) {
     // Render the block content if it has not been created already.
     if (!isset($block->content)) {
@@ -918,6 +918,19 @@ function _block_get_cache_id($block) {
 
     return implode(':', $cid_parts);
   }
+}
+
+
+/**
+ * Returns whether or not blocks can be cached.
+ */
+function _block_is_cacheable() {
+  $cacheable = $_SERVER['REQUEST_METHOD'] == 'GET' || $_SERVER['REQUEST_METHOD'] == 'HEAD';
+  // Allow block caching with node access modules if this variable is set.
+  if (!variable_get('block_cache_node_access_bypass', FALSE)) {
+    $cacheable = $cacheable && !count(module_implements('node_grants'));
+  }
+  return $cacheable;
 }
 
 /**
@@ -1013,7 +1026,7 @@ function block_menu_delete($menu) {
  * Implements hook_form_FORM_ID_alter().
  */
 function block_form_system_performance_settings_alter(&$form, &$form_state) {
-  $disabled = count(module_implements('node_grants'));
+  $disabled = !_block_is_cacheable();
   $form['caching']['block_cache'] = array(
     '#type' => 'checkbox',
     '#title' => t('Cache blocks'),
